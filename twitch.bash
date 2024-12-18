@@ -61,10 +61,37 @@ STREAM_URL="https://twitch.tv/$CHANNEL_NAME"
 TOKEN=$(cat $TOKEN_CACHE)
 USER=$(cat $USER_CACHE)
 
+write_twitch_tui_config() 
+{
+user=$1
+token=$2
+file=$3
+tmp=$(mktemp)
+curl -s https://raw.githubusercontent.com/Xithrius/twitch-tui/main/default-config.toml -o $tmp
+sed -i '1,14d' $tmp
+cat <<EOF > $tmp
+[twitch]
+server = "irc.chat.twitch.tv"
+username = "$user"
+channel = "$user"
+token = "$token"
+EOF
+cat $tmp > $file
+}
+
 # twitch-tui only support emotes in kitty
 # if you don't want extra emoji bloat you can disable in ~/.config/twt
 if [[ -f "$(which kitty)" ]] && [[ -f "$(which twt)" ]]; then
-  echo opening chat in new kitty window
+  echo Opening chat in new kitty window
+
+  twt_config=${XDG_CONFIG_HOME:-~/.config}/twt
+  if [[ ! -d "$twt_config" ]]; then
+    echo Generting twitch-tui configuration
+
+    mkdir -p $twt_config
+    write_twitch_tui_config $USER $TOKEN $twt_config/config.toml
+  fi
+
   kitty twt -u --channel $CHANNEL_NAME --first-state normal &
 fi
 
